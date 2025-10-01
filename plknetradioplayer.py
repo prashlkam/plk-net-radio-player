@@ -163,7 +163,7 @@ class RadioApp(QMainWindow):
         self.genre_combo.currentTextChanged.connect(self.populate_playlist)
         
         self.playlist_widget = QListWidget()
-        self.playlist_widget.itemDoubleClicked.connect(self.play_selected_station)
+        self.playlist_widget.itemClicked.connect(self.play_selected_station)
         
         playlist_layout.addWidget(self.genre_combo)
         playlist_layout.addWidget(self.playlist_widget)
@@ -235,9 +235,15 @@ class RadioApp(QMainWindow):
         if self.player.is_playing():
             self.player.pause()
             self.play_pause_button.setText("▶")
-        elif self.current_url:
-            self.player.play()
-            self.play_pause_button.setText("❚❚")
+        else:
+            # If not playing, try to play the selected station
+            selected_items = self.playlist_widget.selectedItems()
+            if selected_items:
+                self.play_selected_station(selected_items[0])
+            elif self.current_url:
+                # If no station is selected but there was a previous one, resume it
+                self.player.play()
+                self.play_pause_button.setText("❚❚")
 
     def stop_playback(self):
         """Stops the playback entirely."""
@@ -329,7 +335,16 @@ class RadioApp(QMainWindow):
         """Applies a Winamp-inspired stylesheet to the application."""
         # A custom font for the "digital" display
         font_id = QFontDatabase.addApplicationFontFromData(self._get_font_data())
-        font_family = QFontDatabase.applicationFontFamilies(font_id)[0]
+        if font_id == -1:
+            print("Failed to load custom font.")
+            font_family = "Courier New"
+        else:
+            font_families = QFontDatabase.applicationFontFamilies(font_id)
+            if font_families:
+                font_family = font_families[0]
+            else:
+                print("Failed to get font family from loaded font.")
+                font_family = "Courier New"
 
         self.setStyleSheet(f"""
             QMainWindow {{
